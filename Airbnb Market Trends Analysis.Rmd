@@ -1,0 +1,366 @@
+---
+title: "Exploring Airbnb Market Trends"
+output: html_notebook
+---
+
+Airbnb is one of the leading platforms in the sharing economy, enabling property owners to rent out their spaces to travelers worldwide. With its rapid growth across cities and countries, Airbnb has transformed the travel industry by offering a flexible alternative to traditional accommodations such as hotels.
+
+In this project, we will take a closer look at the New York Airbnb market from 2019. This project uses RStudio as the main tool for coding, visualization, and documentation. The analysis focuses on providing insights based on the data for customers and property developers.
+
+```{r}
+# Load the necessary packages
+install.packages("dplyr")
+install.packages("readr")
+install.packages("readxl")
+install.packages("stringr")
+install.packages("ggplot2")
+```
+
+```{r}
+# Load the Necessary Packages
+library(dplyr)
+library(readr)
+library(readxl)
+library(stringr)
+library(ggplot2)
+```
+
+```{r}
+# Load Dataset
+airbnb_price <- read_csv("C:/Users/radit/Downloads/airbnbfile/airbnb_price.csv", show_col_types = FALSE)
+airbnb_room_type <- read_xlsx("C:/Users/radit/Downloads/airbnbfile/airbnb_room_type.xlsx")
+airbnb_review <- read_tsv("C:/Users/radit/Downloads/airbnbfile/airbnb_last_review.tsv", show_col_types = FALSE)
+```
+
+```{r}
+# Merge the three data frames and named "listings"
+listings <- airbnb_price %>%
+    inner_join(airbnb_room_type, by = "listing_id") %>%
+    inner_join(airbnb_review, by = "listing_id")
+```
+
+```{r}
+# Analyze review dates
+review_dates <- listings %>%
+    mutate(last_review_date = as.Date(last_review, format = "%B %d %Y")) %>%
+    summarize(
+      first_reviewed = min(last_review_date, na.rm = TRUE),
+      last_reviewed = max(last_review_date, na.rm = TRUE)
+    )
+print(review_dates)
+```
+
+Based on the analysis of the review data, it was found that the first review was recorded on January 1, 2019, and the last review was recorded on July 9, 2019, covering a period of approximately six months. This indicates that the properties in this dataset were actively receiving reviews during that period, which may suggest consistent rental activity.
+
+```{r}
+# Count private rooms
+private_room_count <- listings %>%
+    mutate(room_type = str_to_lower(room_type)) %>%
+    count(room_type) %>%
+    filter(room_type == "private room")
+nb_private_rooms <- private_room_count$n
+print(nb_private_rooms)
+```
+
+Based on the results above, it is known that the number of listings with the "private room" type amounts to 11,356. This indicates that there is significant interest in "private rooms," as many guests prefer more privacy compared to shared rooms while still enjoying a more affordable price compared to renting an entire property.
+
+```{r}
+# Calculate average listing price
+avg_price <- listings %>%
+    mutate(price_clean = str_remove(price, "dollars") %>% as.numeric()) %>%
+    summarize(avg_price = mean(price_clean, na.rm = TRUE)) %>%
+    pull(avg_price) %>%
+    round(2)
+print(avg_price)
+```
+
+From the calculation of the average price of Airbnb listings, which is \$141.78, several conclusions or insights can be drawn:
+
+#### **Moderate Average Price**
+
+With an average price of approximately \$141.78, this indicates that many guests tend to choose accommodations in the mid-range price category. This price point is fairly affordable for most travelers while still providing greater comfort compared to the cheapest options.
+
+#### **Flexible Price Range**
+
+This average suggests that Airbnb offers a wide variety of accommodations at different price points, ranging from budget-friendly options (such as shared rooms or private rooms) to more expensive choices (such as entire homes/apartments or luxury accommodations).
+
+#### **Potential for the Mid-Market Segment**
+
+Given the relatively moderate average price, Airbnb seems to appeal to travelers seeking a balance between cost and comfort. This indicates that many listings are designed to attract budget-conscious guests who still desire decent and comfortable accommodations.
+
+#### **Conclusion**
+
+The moderate average price highlights that Airbnb provides diverse options to meet the needs of travelers with various budgets, especially those looking for affordable yet comfortable accommodations.
+
+```{r}
+# Add results to solution tibble
+review_dates <- review_dates %>%
+    mutate(nb_private_rooms = nb_private_rooms, avg_price = avg_price)
+```
+
+From the results above, it is known that the average nightly price for Airbnb listings is \$141.78.
+
+```{r}
+# Print results
+print(review_dates)
+```
+
+```{r}
+# Price Distribution
+listings %>%
+    mutate(price_clean = str_remove(price, "dollars") %>% as.numeric()) %>%
+    ggplot(aes(x = price_clean)) +
+    geom_histogram(binwidth = 50, fill = "orange", color = "white") + labs(title = "Airbnb Price Distributions", x = "Price (USD)", y = "Frequency")
+```
+
+```{r}
+# Room Type Distribution
+room_type_distribution <- listings %>%
+    mutate(room_type = str_to_lower(room_type)) %>%
+    count(room_type) %>%
+    arrange(desc(n))
+print(room_type_distribution)
+```
+
+Based on the distribution of Airbnb room types, the following conclusions can be drawn:
+
+#### **Majority of Listings Offer "Entire Home/Apt"**:
+
+With 13,266 units, the majority of Airbnb listings provide the "entire home/apt" type, indicating that many hosts prefer, or guests tend to choose, to rent the entire property for greater privacy and comfort.
+
+#### **"Private Room" is Also Popular**:
+
+The "private room" type, with 11,356 units, is also quite popular, although slightly less than "entire home/apt." This suggests that many guests prefer a private room within a home or apartment rather than sharing spaces with others.
+
+#### **"Shared Room" is the Least Offered Option**:
+
+With only 587 units, "shared room" is the least common room type offered. This may reflect a lack of interest from both hosts and guests, likely due to a preference for greater comfort and privacy.
+
+```{r}
+# Average price by room type 
+price_by_room_type <- listings %>%
+  mutate(
+    price_clean = str_remove(price, "dollars") %>% as.numeric(),
+    room_type = str_to_lower(room_type)
+  ) %>%
+  group_by(room_type) %>%
+  summarize(avg_price = mean(price_clean, na.rm = TRUE)) %>%
+  arrange(desc(avg_price))
+
+print(price_by_room_type)
+```
+
+Based on the average price by room type, the following insights can be drawn:
+
+#### **"Entire Home/Apt" Has the Highest Average Price (\$197.17)**:
+
+This indicates that many users prefer renting an entire home or apartment, which typically offers greater comfort and privacy. As a result, this room type tends to be the most expensive.
+
+#### **"Private Room" Has a Moderate Average Price (\$81.64)**:
+
+The average price of private rooms is lower than that of entire homes/apartments. While still offering more privacy compared to shared rooms, private rooms are more affordable, making them a popular choice for those seeking comfort at a lower cost.
+
+#### **"Shared Room" Has the Lowest Average Price (\$53.47)**:
+
+As the most budget-friendly option, shared rooms prioritize cost savings, but at the expense of privacy since guests must share the space with others. This reflects the trade-off between affordability and comfort for this room type.
+
+```{r}
+# Top 10 most expensive listings
+top_expensive_listings <- listings %>%
+    mutate(price_clean = str_remove(price, "dollars") %>% as.numeric()) %>%
+    mutate(room_type = str_to_lower(room_type)) %>%
+    arrange(desc(price_clean)) %>%
+    select(listing_id, price_clean, room_type) %>%
+    head(10)
+
+print(top_expensive_listings)
+```
+
+From the data showing the 10 most expensive Airbnb listings, several conclusions can be drawn:
+
+#### **Dominance of "Entire Home/Apt" Listings**:
+
+Most of the most expensive listings are "entire home/apt." This suggests that renting an entire house or apartment tends to command higher prices, likely due to the greater comfort, privacy, and comprehensive amenities they offer.
+
+#### **High Prices Are Not Exclusive to "Entire Home/Apt"**:
+
+While "entire home/apt" dominates the list, a private room priced at \$7,500 is also among the most expensive listings. This indicates that room type is not the sole determinant of high prices; other factors such as location, facilities, and exclusivity play a significant role.
+
+#### **Significant Price Variations**:
+
+There is a considerable price range among the most expensive listings, from \$7,500 for a private room to \$2,500 for an entire home/apartment. This likely reflects differences in the quality of the properties, their location, or their popularity among guests.
+
+```{r}
+# Listings by price range
+listings_by_price_range <- listings %>%
+  mutate(price_clean = str_remove(price, " dollars") %>% as.numeric()) %>%
+  mutate(price_range = case_when(
+    price_clean < 50 ~ "Under $50",
+    price_clean >= 50 & price_clean < 100 ~ "$50-$99",
+    price_clean >= 100 & price_clean < 200 ~ "$100-$199",
+    price_clean >= 200 ~ "$200+"
+  )) %>%
+  count(price_range) %>%
+  arrange(price_range)
+
+print(listings_by_price_range)
+```
+
+```{r}
+# Visualization by price range
+ggplot(listings_by_price_range, aes(x = price_range, y = n, fill = price_range))+
+  geom_bar(stat = "identity", show.legend = FALSE) + labs(
+    title = "Distribution of Listings by Price Range",
+    x = "Price Range",
+    y = "Number of Listings"
+  ) + theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+Based on the results above, the following conclusions can be drawn:
+
+#### **Majority of Listings in the Mid-Price Range**:
+
+The price ranges of \$50-\$99 (9,003 listings) and \$100-\$199 (8,985 listings) are the two categories with the largest number of listings. This indicates that the majority of Airbnb listings fall within the mid-price range, which is likely more affordable for many guests and includes a wide variety of accommodation types.
+
+#### **Listings with Higher Prices**:
+
+The \$200+ price range (4,648 listings) still accounts for a significant number of listings, reflecting the availability of higher-priced accommodations, such as entire homes/apartments, which offer more comfort and amenities.
+
+#### **Listings with the Lowest Prices**:
+
+The "Under \$50" price range (2,573 listings) has the fewest listings. This suggests that very affordable options are less available and likely include room types such as shared rooms or properties located in less central areas.
+
+#### **Conclusion**:
+
+The majority of Airbnb listings are in the mid-price range (\$50-\$199), which likely appeals to many guests seeking a balance between cost and comfort. There are accommodations available in the higher price range (above \$200), but very affordable options (under \$50) are relatively rare.
+
+```{r}
+# Top 10 most cheap lsitings
+cheap_listings <- listings %>%
+    mutate(price_clean = str_remove(price, "dollars") %>% as.numeric()) %>%
+    mutate(room_type = str_to_lower(room_type)) %>%
+    arrange(desc(price_clean)) %>%
+    select(listing_id, price_clean, room_type) %>%
+    tail(10)
+
+print(cheap_listings)
+```
+
+Based on the results above, several conclusions or insights can be drawn:
+
+#### **Extremely Low or Missing Price Data**:
+
+The majority of the listings have a price of **0** or **10**, which likely indicates missing or incomplete data in the price column. This suggests that there may be errors in data processing or a lack of available price information for certain listings.
+
+#### **Available Room Types**:
+
+Despite the very low prices, some of the listings are for **entire home/apt** and **private room**, with **private room** being the more common option. This suggests that most of the cheapest listings are for private rooms within a house or apartment.
+
+#### **Potential Data Gaps or Invalid Data**:
+
+Many listings with a price of 0 point to issues with the recording or processing of data. This should be further investigated to ensure the accuracy of price information in the dataset.
+
+Overall, this result indicates that the price data for certain Airbnb listings may be incomplete or problematic, requiring correction for more accurate analysis.
+
+```{r}
+# Grouping the number of reviews by month and year
+reviews_over_time <- listings %>%
+  mutate(last_review_date = as.Date(last_review, format = "%B %d %Y")) %>%
+  filter(!is.na(last_review_date)) %>%
+  mutate(year_month = format(last_review_date, "%Y-%m")) %>%
+  count(year_month) %>%
+  arrange(year_month)
+
+# Visualization
+ggplot(reviews_over_time, aes(x = year_month, y = n, group = 1)) +
+  geom_line(color = "blue", linewidth = 1) +
+  geom_point(color = "red", size = 2) +
+  labs(
+    title = "Trend of Reviews Over Time",
+    x = "Time (Year-Month)",
+    y = "Number of Reviews"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.ticks.x = element_blank()
+  )
+```
+
+Based on the review trend chart over time, the following insights can be drawn:
+
+#### **Growth Trend**:
+
+The number of reviews shows a significant increase from the beginning of 2019, peaking around mid-2019 (around June). This indicates a rise in review activity on the platform during this period.
+
+#### **Peak Activity**:
+
+The highest number of reviews occurred in June 2019, with more than 12,500 reviews. This suggests a period of extremely high user interaction and activity.
+
+#### **Decline After the Peak**:
+
+After reaching its peak, the number of reviews declined in July 2019. This decrease may have been due to seasonal factors, reduced user activity, or changes on the platform.
+
+#### **Early Year Fluctuations**:
+
+From the beginning of 2019 until April 2019, the number of reviews was relatively low with little fluctuation, before increasing significantly in May 2019.
+
+```{r}
+price_by_room_type <- listings %>%
+  mutate(
+    price_clean = str_remove(price, "dollars") %>% as.numeric(),
+    room_type = str_to_lower(room_type)
+  ) %>%
+  group_by(room_type) %>%
+  summarize(max_price = max(price_clean),
+            min_price = min(price_clean)) %>%
+  arrange(desc(max_price))
+
+print(price_by_room_type)
+```
+
+Based on the maximum and minimum price data per Airbnb room type, the following conclusions can be drawn:
+
+#### **Widest Price Range for Private Room**:
+
+Private room has the widest price range, with the maximum price reaching \$7,500 and the minimum price at \$0. This indicates significant variability within this room type, ranging from very affordable options (likely free or symbolic fee shared rooms) to extremely high prices, possibly for highly exclusive locations or amenities.
+
+#### **Maximum Price for Entire Home/Apt**:
+
+Entire home/apt has a maximum price of \$5,100. While this is lower than the maximum price for private rooms, this room type can still offer larger or more luxurious accommodations at a higher price.
+
+#### **Highest Price for Shared Room**:
+
+Shared room has a maximum price of \$800, which is considerably lower than the maximum prices for other room types. This suggests that shared rooms are generally more affordable and lack significant price variation, as they typically offer fewer amenities and less privacy compared to private rooms or entire homes/apartments.
+
+Private room has the most varied price range, reflecting flexibility in pricing based on factors like location, amenities, or exclusivity. Entire home/apt and shared room have narrower price ranges, with lower maximum prices compared to private rooms. Shared room types tend to be more affordable and do not reach extremely high prices, making them a more economical choice.
+
+```{r}
+# Finding Host with most reviews
+top_host <- listings %>%
+  mutate(
+    host_name = str_to_lower(host_name)
+  ) %>%
+  group_by(host_name) %>%
+  summarize(total_reviews = n_distinct(listing_id)) %>%
+  arrange(desc(total_reviews)) %>%
+  head(5)
+
+print(top_host)
+```
+
+Based on the data of the 5 Airbnb hosts with the most reviews, the following conclusions can be drawn:
+
+#### **Most Popular Host**:
+
+Michael is the host with the most reviews, totaling 215 reviews. This suggests that Michael likely has multiple listings or has been active for a significant amount of time, resulting in more reviews from guests.
+
+#### **Fairly Popular Hosts**:
+
+Sonder (NYC) has recorded 207 reviews, indicating that they also have a large number of guests leaving reviews, possibly due to their reputation or the type of accommodation they offer in New York City. David, John, and Alex have 197, 177, and 153 reviews, respectively, still reflecting a high level of popularity and success as hosts.
+
+#### **Different Levels of Popularity**:
+
+There is a noticeable difference in the number of reviews between these hosts, with Michael and Sonder (NYC) leading, while the others, although still having a substantial number of reviews, are slightly lower in comparison.
+
+Michael and Sonder (NYC) stand out as the two hosts with the highest number of reviews, suggesting a high level of guest satisfaction. Other hosts, such as David, John, and Alex, also have many reviews, indicating their success in providing good accommodations.

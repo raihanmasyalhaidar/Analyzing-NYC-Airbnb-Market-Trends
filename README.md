@@ -1,6 +1,6 @@
 <div align="center">
 
-# Analyzing-NYC-Airbnb-Market-Trends
+# Analyzing NYC Airbnb Market Trends
 
 </div>
 

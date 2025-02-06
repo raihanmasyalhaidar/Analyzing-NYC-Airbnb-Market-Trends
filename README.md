@@ -17,8 +17,7 @@ In this project, we will take a closer look at the New York Airbnb market from 2
 ## Objectives
 1. Identify price patterns based on listing locations
 2. Analyze room types most preferred by travelers
-3. Assess the relationship between recent guest reviews and listing availability
-4. Provide strategic recommendations to improve market performance
+3. Provide strategic recommendations to improve market performance
 
 ## Dataset
 The data used is sourced from :
